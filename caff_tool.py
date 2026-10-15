@@ -174,13 +174,6 @@ class CaffTomlConverter:
     def _s(value: str) -> str:
         return json.dumps(value, ensure_ascii=False).replace("\x7f", "\\u007f")
 
-    @staticmethod
-    def _sl(value: str) -> str:
-        """TOML literal string (single quotes, no escapes) when safe."""
-        if value and not re.search(r"[\x00-\x1f\x7f']", value):
-            return "'" + value + "'"
-        return CaffTomlConverter._s(value)
-
     # ------------------------------------------------------------------
     # Expand TOML entries into flat patch items:
     #   (offset, max_bytes, text, label)
@@ -206,18 +199,12 @@ class CaffTomlConverter:
         items = []
         for i, entry in enumerate(entries):
             label = entry.get("key", f"Entry #{i+1}")
-            # compound "A|B|C" resolves via base "A"; but a real key that
-            # literally contains '|' always wins
-            if label in key2off or "|" not in label:
-                base_label = label
-            else:
-                base_label = label.split("|")[0]
             if "offset" in entry and "max_bytes" in entry:
                 # explicit metadata (old TOMLs) wins
                 off, mb = entry["offset"], entry["max_bytes"]
             else:
                 # resolve by key name via the key-table/line binding
-                off = key2off.get(base_label)
+                off = key2off.get(label)
                 if off is None:
                     raise ValueError(
                         f"Key '{label}' not found in binary; cannot map entry."
@@ -230,10 +217,10 @@ class CaffTomlConverter:
                 ("scale", "_SCALE"),
             ):
                 if field in entry:
-                    poff = key2off.get(base_label + suffix)
+                    poff = key2off.get(label + suffix)
                     if poff is None:
                         raise ValueError(
-                            f"Key '{base_label + suffix}' not found in binary; "
+                            f"Key '{label + suffix}' not found in binary; "
                             f"cannot map '{field}'."
                         )
                     items.append((poff, off2len[poff], entry[field], label + suffix))
@@ -324,7 +311,6 @@ class CaffTomlConverter:
                     base = by_key.get(r["key"][: -len(suffix)])
                     if base is not None and field not in base:
                         base[field] = r["text"]
-                        base.setdefault("_members", [base["key"]]).append(r["key"])
                         consumed.add(id(r))
                     break
         merged = [r for r in records if id(r) not in consumed]
@@ -353,7 +339,7 @@ class CaffTomlConverter:
         # Construct TOML
         toml_lines = [
             "[meta]",
-            f"build_path = {CaffTomlConverter._sl(build_path)}",
+            f"build_path = {CaffTomlConverter._s(build_path)}",
             "",
             "[script]",
             f"audio_meta = {CaffTomlConverter._s(audio_meta)}",
@@ -362,18 +348,7 @@ class CaffTomlConverter:
 
         for r in merged:
             toml_lines.append("[[entries]]")
-            if "_members" in r:
-                rank = {"_POSITION_X": 0, "_POSITION_Y": 1, "_SCALE": 2}
-                rest = sorted(
-                    r["_members"][1:],
-                    key=lambda k: next(
-                        (v for s, v in rank.items() if k.endswith(s)), 9
-                    ),
-                )
-                display_key = "|".join([r["_members"][0]] + rest)
-            else:
-                display_key = r["key"]
-            toml_lines.append(f"key = {CaffTomlConverter._s(display_key)}")
+            toml_lines.append(f"key = {CaffTomlConverter._s(r['key'])}")
             for field in ("position_x", "position_y", "scale"):
                 if field in r:
                     toml_lines.append(f"{field} = {CaffTomlConverter._s(r[field])}")
@@ -562,3 +537,4 @@ if __name__ == "__main__":
                 f.write(modded_bin)
 
             print(f"[SUCCESS] Repacked {in_toml_path} -> {out_bin_path}")
+
