@@ -13,60 +13,324 @@ except ImportError:
 
 class CaffTomlConverter:
 
+    # ------------------------------------------------------------------
+    # CAFF header checksum (field 0x14). Verified in-game (xemu).
+    # Computed over the first 0x180 bytes with the checksum field zeroed.
+    # ------------------------------------------------------------------
+    @staticmethod
+    def caff_checksum(data: bytes) -> int:
+        buf = bytearray(data[:0x180])
+        if len(buf) < 0x180:
+            buf.extend(b"\x00" * (0x180 - len(buf)))
+        struct.pack_into("<I", buf, 0x14, 0)
+
+        def do_byte(initial: int, byte: int) -> int:
+            signed = byte if byte < 128 else byte - 256
+            shifted = (initial << 4) & 0xFFFFFFFF
+            if shifted >= 0x80000000:
+                shifted -= 0x100000000
+            val = shifted + signed
+            val_u = val & 0xFFFFFFFF
+            mask = val_u & 0xF0000000
+            if mask:
+                mask |= mask >> 24
+                val_u ^= mask
+            return val_u & 0xFFFFFFFF
+
+        chksm = 0
+        for i in range(0x180):
+            chksm = do_byte(chksm, buf[i])
+        return chksm
+
+    # ------------------------------------------------------------------
+    # Structural parser: keys -> LSBL#1 offset table -> text blob -> tail
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _parse_caff(raw: bytes) -> dict:
+        if raw[:4] != b"CAFF":
+            raise ValueError("Invalid format: missing CAFF header.")
+
+        count = struct.unpack_from("<I", raw, 0x1A8)[0]
+
+        # Key names (UTF-16LE), addressed by the key table at 0x1AC
+        keys = []
+        key_x = []
+        for i in range(count):
+            koff, x = struct.unpack_from("<II", raw, 0x1AC + i * 8)
+            key_x.append(x)
+            kstart = 0x180 + koff
+            # wchar-aligned scan: terminator is \x00\x00, but the char's own
+            # low zero byte must not be mistaken for its start
+            kend = kstart
+            while kend + 1 < len(raw) and not (
+                raw[kend] == 0 and raw[kend + 1] == 0
+            ):
+                kend += 2
+            keys.append(raw[kstart:kend].decode("utf-16-le", errors="ignore"))
+        kt_end = 0x1AC + count * 8
+
+        lsbl = raw.find(b"LSBL", kt_end)
+        if lsbl < 0:
+            raise ValueError("Invalid file: missing LSBL block.")
+
+        hdr = [struct.unpack_from("<I", raw, lsbl + o)[0] for o in (4, 8, 12, 16, 20, 24, 28)]
+
+        # Offset table at LSBL+0x24: (u16 line, u32 wchar_offset)*, ends with (0xFFFF, end)
+        tbl = []
+        p = lsbl + 0x24
+        while p + 6 <= len(raw):
+            line, off = struct.unpack_from("<HI", raw, p)
+            tbl.append((line, off))
+            p += 6
+            if line == 0xFFFF:
+                break
+        else:
+            raise ValueError("LSBL offset table has no terminator.")
+
+        starts = [(l, o) for l, o in tbl if l != 0xFFFF]
+        txt_start = p
+        end_wchar = tbl[-1][1]
+
+        # Original strings as raw byte slices (including NUL terminator)
+        strs = []
+        for i, (line, off) in enumerate(starts):
+            s = txt_start + off * 2
+            e = txt_start + (starts[i + 1][1] if i + 1 < len(starts) else end_wchar) * 2
+            strs.append(raw[s:e])
+
+        return {
+            "count": count,
+            "keys": keys,
+            "key_x": key_x,
+            "lsbl": lsbl,
+            "hdr": hdr,
+            "tbl": tbl,
+            "starts": starts,
+            "txt_start": txt_start,
+            "strs": strs,
+            "tail": raw[txt_start + end_wchar * 2:],
+            "pre": bytearray(raw[:lsbl]),          # header + key table + keys
+            "old_blob_len": end_wchar * 2,
+        }
+
+    # ------------------------------------------------------------------
+    # Rebuild: new_strs = list of bytes, each including trailing \x00\x00.
+    # Recomputes LSBL#1 offsets, size fields, B/C and header checksum.
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _rebuild_caff(parsed: dict, new_strs: list) -> bytes:
+        if len(new_strs) != len(parsed["starts"]):
+            raise ValueError(
+                f"String count mismatch: table has {len(parsed['starts'])}, got {len(new_strs)}"
+            )
+
+        blob = b"".join(new_strs)
+        new_tbl = []
+        off = 0
+        for (line, _), s in zip(parsed["starts"], new_strs):
+            if len(s) % 2:
+                raise ValueError("UTF-16 string has odd byte length.")
+            new_tbl.append((line, off))
+            off += len(s) // 2
+        new_tbl.append((0xFFFF, off))  # terminator = end of text block (wchar)
+
+        delta = len(blob) - parsed["old_blob_len"]
+
+        table_bytes = b"".join(struct.pack("<HI", l, o) for l, o in new_tbl)
+        lsbl_prefix = 36 + 6 * len(new_tbl)          # magic + 7*u32 + count + table
+        A = lsbl_prefix + len(blob) + 2              # = txt_end - lsbl + 2 (verified)
+        D = A - 0x1C
+        B = parsed["hdr"][4] + delta                 # fields past text shift by delta
+        C = parsed["hdr"][5] + delta
+
+        lsbl_blk = b"LSBL"
+        lsbl_blk += b"".join(struct.pack("<I", v) for v in (parsed["hdr"][0], parsed["hdr"][1], parsed["hdr"][2], A, B, C, D))
+        lsbl_blk += struct.pack("<I", parsed["count"])
+        lsbl_blk += table_bytes
+
+        pre = bytearray(parsed["pre"])
+        size = len(pre) + len(lsbl_blk) + len(blob) + len(parsed["tail"])
+        struct.pack_into("<I", pre, 0x34, struct.unpack_from("<I", pre, 0x34)[0] + delta)
+        struct.pack_into("<I", pre, 0x50, size - 0x180)
+        struct.pack_into("<I", pre, 0x64, size - 0x180)
+        struct.pack_into("<I", pre, 0x194, struct.unpack_from("<I", pre, 0x194)[0] + delta)
+
+        result = bytearray(bytes(pre) + lsbl_blk + blob + parsed["tail"])
+        struct.pack_into("<I", result, 0x14, CaffTomlConverter.caff_checksum(result))
+        return bytes(result)
+
+    # ------------------------------------------------------------------
+    # Apply TOML entries onto raw binary data.
+    # Short/equal strings -> in-place patching (byte-exact).
+    # If any string is longer than its buffer -> full CAFF rebuild
+    # (LSBL#1 offset table + size fields + checksum are recalculated).
+    # ------------------------------------------------------------------
+    # ------------------------------------------------------------------
+    # TOML string helper: JSON escapes are valid in TOML; text is written
+    # as literal UTF-8 (readable Cyrillic etc.); U+007F escaped by hand
+    # (TOML forbids it raw inside strings).
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _s(value: str) -> str:
+        return json.dumps(value, ensure_ascii=False).replace("\x7f", "\\u007f")
+
+    @staticmethod
+    def _sl(value: str) -> str:
+        """TOML literal string (single quotes, no escapes) when safe."""
+        if value and not re.search(r"[\x00-\x1f\x7f']", value):
+            return "'" + value + "'"
+        return CaffTomlConverter._s(value)
+
+    # ------------------------------------------------------------------
+    # Expand TOML entries into flat patch items:
+    #   (offset, max_bytes, text, label)
+    # Main text comes from the entry; position_x/position_y/scale fields
+    # are resolved to their own strings via key-name lookup in the binary.
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _collect_items(raw_bytes: bytes, entries: list) -> list:
+        parsed = CaffTomlConverter._parse_caff(raw_bytes)
+        line2idx = {L: j for j, (L, _o) in enumerate(parsed["starts"])}
+        key2off = {}
+        for kname, x in zip(parsed["keys"], parsed["key_x"]):
+            j = line2idx.get(x >> 16)
+            if j is not None and kname not in key2off:
+                key2off[kname] = parsed["txt_start"] + parsed["starts"][j][1] * 2
+        off2len = {
+            parsed["txt_start"] + off * 2: len(parsed["strs"][j]) - 2
+            for j, (_L, off) in enumerate(parsed["starts"])
+        }
+
+        matches = CaffTomlConverter._get_string_matches(bytearray(raw_bytes), entries)
+
+        items = []
+        for i, entry in enumerate(entries):
+            label = entry.get("key", f"Entry #{i+1}")
+            # compound "A|B|C" resolves via base "A"; but a real key that
+            # literally contains '|' always wins
+            if label in key2off or "|" not in label:
+                base_label = label
+            else:
+                base_label = label.split("|")[0]
+            if "offset" in entry and "max_bytes" in entry:
+                # explicit metadata (old TOMLs) wins
+                off, mb = entry["offset"], entry["max_bytes"]
+            else:
+                # resolve by key name via the key-table/line binding
+                off = key2off.get(base_label)
+                if off is None:
+                    raise ValueError(
+                        f"Key '{label}' not found in binary; cannot map entry."
+                    )
+                mb = off2len[off]
+            items.append((off, mb, entry.get("text", ""), label))
+            for field, suffix in (
+                ("position_x", "_POSITION_X"),
+                ("position_y", "_POSITION_Y"),
+                ("scale", "_SCALE"),
+            ):
+                if field in entry:
+                    poff = key2off.get(base_label + suffix)
+                    if poff is None:
+                        raise ValueError(
+                            f"Key '{base_label + suffix}' not found in binary; "
+                            f"cannot map '{field}'."
+                        )
+                    items.append((poff, off2len[poff], entry[field], label + suffix))
+        return items
+
+    # ------------------------------------------------------------------
+    # Apply flat patch items. Short/equal -> in-place (byte-exact);
+    # longer -> full CAFF rebuild (LSBL#1 offsets, sizes, checksum).
+    # ------------------------------------------------------------------
+    @staticmethod
+    def _apply_items(raw_data: bytearray, items: list) -> bytes:
+        encoded = [text.encode("utf-16le") for (_o, _m, text, _l) in items]
+        oversized = [
+            i for i, (_o, mb, _t, _l) in enumerate(items)
+            if len(encoded[i]) > mb
+        ]
+
+        if not oversized:
+            for (off, mb, _t, _l), enc in zip(items, encoded):
+                raw_data[off:off + mb] = enc + b"\x00" * (mb - len(enc))
+            return bytes(raw_data)
+
+        # ---- rebuild path -------------------------------------------------
+        parsed = CaffTomlConverter._parse_caff(bytes(raw_data))
+        offset_to_idx = {
+            parsed["txt_start"] + off * 2: i for i, (_L, off) in enumerate(parsed["starts"])
+        }
+        offset2label = {off: label for (off, _m, _t, label) in items}
+
+        new_strs = list(parsed["strs"])  # unchanged strings keep original bytes
+        rebuilt = set()
+        for (off, _mb, text, _l), enc in zip(items, encoded):
+            idx = offset_to_idx.get(off)
+            if idx is None:
+                continue
+            old_text = parsed["strs"][idx][:-2].decode("utf-16-le", errors="ignore")
+            if text == old_text:
+                continue
+            new_strs[idx] = enc + b"\x00\x00"
+            rebuilt.add(idx)
+
+        print("\n[INFO] String(s) exceed original buffer -> full CAFF rebuild:")
+        for idx in sorted(rebuilt):
+            abs_off = parsed["txt_start"] + parsed["starts"][idx][1] * 2
+            print(f"  + '{offset2label.get(abs_off, '#' + str(idx))}' "
+                  f"({len(parsed['strs'][idx]) - 2} -> {len(new_strs[idx]) - 2} bytes)")
+        print(f"  Text block delta: "
+              f"{sum(len(s) for s in new_strs) - parsed['old_blob_len']:+d} bytes")
+
+        return CaffTomlConverter._rebuild_caff(parsed, new_strs)
+
     @staticmethod
     def bin_to_toml(bin_bytes: bytes) -> str:
         if not bin_bytes.startswith(b"CAFF"):
             raise ValueError("Invalid format: missing CAFF header.")
 
-        lsbl_idx = bin_bytes.find(b"LSBL")
-        if lsbl_idx == -1:
-            raise ValueError("Invalid file: missing LSBL block.")
+        # Structural parse: key table -> keys -> LSBL#1 -> exact string boundaries
+        parsed = CaffTomlConverter._parse_caff(bin_bytes)
 
-        # Read number of strings in block
-        string_count = struct.unpack(
-            "<I", bin_bytes[lsbl_idx + 32 : lsbl_idx + 36]
-        )[0]
+        # Keys are bound to strings via the source-script line number:
+        # key_table.X high 16 bits == LSBL#1 entry line (u16) of the string.
+        line2key = {}
+        for kname, x in zip(parsed["keys"], parsed["key_x"]):
+            line2key.setdefault(x >> 16, kname)
 
-        # 1. Locate all UTF-16LE dialogue strings following LSBL
-        str_pattern = re.compile(b"(?:[^\x00]\x00){2,}")
-        dialogue_strings = []
-        scan_offset = lsbl_idx + 48
+        # Strings located via the LSBL#1 offset table (wchar offsets)
+        records = []
+        for i, raw_s in enumerate(parsed["strs"]):
+            records.append({
+                "key": line2key.get(parsed["starts"][i][0], f"string_key_{i}"),
+                "offset": parsed["txt_start"] + parsed["starts"][i][1] * 2,
+                "max_bytes": len(raw_s) - 2,
+                "text": raw_s[:-2].decode("utf-16-le", errors="ignore"),
+            })
 
-        for match in str_pattern.finditer(bin_bytes[scan_offset:]):
-            start = scan_offset + match.start()
-            end = scan_offset + match.end()
-            raw_bytes = bin_bytes[start:end]
-            decoded = raw_bytes.decode("utf-16le", errors="ignore")
-
-            # Filter out key names
-            if (
-                not decoded.startswith("cutscene_")
-                and not decoded == "EmptyString"
-            ):
-                dialogue_strings.append((start, end - start, decoded))
-
-            if len(dialogue_strings) == string_count:
-                break
-
-        # 2. Locate ASCII key names
-        keys = []
-        ascii_region = bin_bytes[scan_offset:]
-        key_matches = re.findall(
-            b"(?:cutscene_[A-Za-z0-9_]+|EmptyString)", ascii_region
+        # Merge layout records: KEY_POSITION_X / KEY_POSITION_Y / KEY_SCALE
+        # become fields of the base KEY entry.
+        by_key = {r["key"]: r for r in records}
+        pos_suffixes = (
+            ("_POSITION_X", "position_x"),
+            ("_POSITION_Y", "position_y"),
+            ("_SCALE", "scale"),
         )
+        consumed = set()
+        for r in records:
+            for suffix, field in pos_suffixes:
+                if r["key"].endswith(suffix):
+                    base = by_key.get(r["key"][: -len(suffix)])
+                    if base is not None and field not in base:
+                        base[field] = r["text"]
+                        base.setdefault("_members", [base["key"]]).append(r["key"])
+                        consumed.add(id(r))
+                    break
+        merged = [r for r in records if id(r) not in consumed]
 
-        for k in key_matches:
-            decoded_key = k.decode("ascii")
-            if decoded_key not in keys:
-                keys.append(decoded_key)
-            if len(keys) == string_count:
-                break
-
-        while len(keys) < len(dialogue_strings):
-            keys.append(f"string_key_{len(keys)}")
-
-        # 3. Extract Build Path & Script metadata
-        remaining = bin_bytes[scan_offset:]
+        # Build Path & Script metadata (informational, lives in the tail)
+        remaining = parsed["tail"]
         audio_meta = ""
         audio_start = remaining.find(b";")
         if audio_start != -1:
@@ -89,20 +353,31 @@ class CaffTomlConverter:
         # Construct TOML
         toml_lines = [
             "[meta]",
-            f"build_path = {json.dumps(build_path)}",
+            f"build_path = {CaffTomlConverter._sl(build_path)}",
             "",
             "[script]",
-            f"audio_meta = {json.dumps(audio_meta)}",
+            f"audio_meta = {CaffTomlConverter._s(audio_meta)}",
             "",
         ]
 
-        for i, (offset_val, len_val, text_val) in enumerate(dialogue_strings):
-            key_val = keys[i] if i < len(keys) else f"key_{i}"
+        for r in merged:
             toml_lines.append("[[entries]]")
-            toml_lines.append(f"key = {json.dumps(key_val)}")
-            toml_lines.append(f"offset = {offset_val}")
-            toml_lines.append(f"max_bytes = {len_val}")
-            toml_lines.append(f"text = {json.dumps(text_val)}")
+            if "_members" in r:
+                rank = {"_POSITION_X": 0, "_POSITION_Y": 1, "_SCALE": 2}
+                rest = sorted(
+                    r["_members"][1:],
+                    key=lambda k: next(
+                        (v for s, v in rank.items() if k.endswith(s)), 9
+                    ),
+                )
+                display_key = "|".join([r["_members"][0]] + rest)
+            else:
+                display_key = r["key"]
+            toml_lines.append(f"key = {CaffTomlConverter._s(display_key)}")
+            for field in ("position_x", "position_y", "scale"):
+                if field in r:
+                    toml_lines.append(f"{field} = {CaffTomlConverter._s(r[field])}")
+            toml_lines.append(f"text = {CaffTomlConverter._s(r['text'])}")
             toml_lines.append("")
 
         toml_lines.append("[binary]")
@@ -112,7 +387,7 @@ class CaffTomlConverter:
 
     @staticmethod
     def _get_string_matches(raw_data: bytearray, entries: list) -> list:
-        """Utility to retrieve (offset, max_bytes) tuples from TOML metadata or via regex fallback."""
+        """Utility to retrieve (offset, max_bytes) tuples from TOML metadata or via structural fallback."""
         matches = []
         has_metadata = all("offset" in e and "max_bytes" in e for e in entries)
 
@@ -120,27 +395,10 @@ class CaffTomlConverter:
             for entry in entries:
                 matches.append((entry["offset"], entry["max_bytes"]))
         else:
-            lsbl_idx = raw_data.find(b"LSBL")
-            if lsbl_idx == -1:
-                raise ValueError("Invalid template binary: missing LSBL block.")
-
-            str_pattern = re.compile(b"(?:[^\x00]\x00){2,}")
-            scan_offset = lsbl_idx + 48
-
-            for match in str_pattern.finditer(raw_data[scan_offset:]):
-                start = scan_offset + match.start()
-                end = scan_offset + match.end()
-                raw_bytes = raw_data[start:end]
-                decoded = raw_bytes.decode("utf-16le", errors="ignore")
-
-                if (
-                    not decoded.startswith("cutscene_")
-                    and not decoded == "EmptyString"
-                ):
-                    matches.append((start, end - start))
-
-                if len(matches) == len(entries):
-                    break
+            parsed = CaffTomlConverter._parse_caff(bytes(raw_data))
+            for i, raw_s in enumerate(parsed["strs"][: len(entries)]):
+                off_abs = parsed["txt_start"] + parsed["starts"][i][1] * 2
+                matches.append((off_abs, len(raw_s) - 2))
 
         return matches
 
@@ -154,24 +412,8 @@ class CaffTomlConverter:
 
         raw_data = bytearray(bytes.fromhex(template_hex))
         entries = parsed.get("entries", [])
-        matches = CaffTomlConverter._get_string_matches(raw_data, entries)
-
-        # Process replacement in reverse order to preserve offsets
-        for i in reversed(range(min(len(entries), len(matches)))):
-            start_off, old_byte_len = matches[i]
-            new_text = entries[i].get("text", "")
-            new_encoded = new_text.encode("utf-16le")
-
-            raw_data[start_off : start_off + old_byte_len] = new_encoded
-
-            if len(entries) == 1 and len(new_encoded) != old_byte_len:
-                char_count_offset = start_off - 4
-                new_char_count = len(new_text)
-                struct.pack_into(
-                    "<I", raw_data, char_count_offset, new_char_count
-                )
-
-        return bytes(raw_data)
+        items = CaffTomlConverter._collect_items(bytes(raw_data), entries)
+        return CaffTomlConverter._apply_items(raw_data, items)
 
     @staticmethod
     def pack_safe(toml_path: str, target_bin_path: str = None) -> bytes:
@@ -199,41 +441,22 @@ class CaffTomlConverter:
                 sys.exit(1)
 
         entries = parsed.get("entries", [])
-        matches = CaffTomlConverter._get_string_matches(raw_data, entries)
+        items = CaffTomlConverter._collect_items(bytes(raw_data), entries)
 
-        if len(matches) < len(entries):
-            print(
-                f"[WARNING] TOML contains {len(entries)} entries, but only {len(matches)} matching string locations were found."
-            )
-            input("Execution paused. Press Enter to exit...")
-            sys.exit(1)
+        # Check sizes up-front and inform about the rebuild path
+        warnings = []
+        for (off, mb, text, label) in items:
+            new_len = len(text.encode("utf-16le"))
+            if new_len > mb:
+                warnings.append((label, new_len, mb))
 
-        for i, (start_off, old_byte_len) in enumerate(matches):
-            new_text = entries[i].get("text", "")
-            key_name = entries[i].get("key", f"Entry #{i+1}")
-            new_encoded = new_text.encode("utf-16le")
+        if warnings:
+            print(f"\n[INFO] {len(warnings)} string(s) are longer than the original buffer.")
+            print(       "       They will be inserted via full CAFF rebuild (offsets/checksum auto-fixed).")
+            for label, new_len, old_len in warnings:
+                print(f"       ~ '{label}': {old_len} -> {new_len} bytes")
 
-            # Check if string exceeds allocated byte capacity
-            if len(new_encoded) > old_byte_len:
-                print(
-                    f"\n[WARNING] String is too large for existing buffer space!"
-                )
-                print(f"          Key/Entry: '{key_name}'")
-                print(
-                    f"          New text size : {len(new_encoded)} bytes (Text: \"{new_text}\")"
-                )
-                print(f"          Original max  : {old_byte_len} bytes")
-                input("\nExecution paused. Press Enter to exit...")
-                sys.exit(1)
-
-            # Pad smaller strings with NULL bytes to maintain exact length
-            padding_len = old_byte_len - len(new_encoded)
-            padded_bytes = new_encoded + (b"\x00" * padding_len)
-
-            # Overwrite string bytes only
-            raw_data[start_off : start_off + old_byte_len] = padded_bytes
-
-        return bytes(raw_data)
+        return CaffTomlConverter._apply_items(raw_data, items)
 
     @staticmethod
     def verify_lossless(
@@ -270,6 +493,11 @@ if __name__ == "__main__":
         print("Usage:")
         print("  Unpack: python caff_tool.py unpack input.bin [output.toml]")
         print("  Pack:   python caff_tool.py pack input.toml [target.bin] [output.bin] [--safe]")
+        print()
+        print("Notes:")
+        print("  - Strings shorter/equal than original are patched in place (byte-exact).")
+        print("  - Longer strings trigger a full CAFF rebuild: LSBL offset table,")
+        print("    size fields and header checksum are recalculated automatically.")
         sys.exit(1)
 
     mode = cli_args[0].lower()
