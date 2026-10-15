@@ -35,8 +35,8 @@ unpacks them into editable TOML and repacks with support for strings of **any le
   ```
 
 - **Readable UTF-8**: texts in any language stay literal in TOML, no `\u` escapes.
-- **Longer strings**: equal/shorter strings are patched byte-for-byte; longer ones
-  trigger a full CAFF rebuild — the LSBL #1 offset table, size fields (`0x34`,
+- **Length changes**: equal-length strings are patched byte-for-byte; any length
+  change (shorter or longer) triggers a full CAFF rebuild — the LSBL #1 offset table, size fields (`0x34`,
   `0x50`, `0x64`, `0x194`, `B`/`C`) and the header checksum (`0x14`) are
   recalculated automatically.
 - `offset`/`max_bytes` fields are not needed in TOML — packing resolves strings by
