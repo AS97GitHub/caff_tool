@@ -48,6 +48,10 @@ Python **3.11+** (используется стандартный `tomllib`). З
 
 ## Использование
 
+> ⚠️ В Windows для запуска можно использовать `python` или `py`, в зависимости от установленной версии Python.
+
+> ⚠️ В Linux вместо `python` может потребоваться использовать `python3`.
+
 ```bat
 :: .bin -> .toml (+ встроенная проверка lossless round-trip)
 python caff_tool.py unpack input.bin [output.toml]
@@ -59,7 +63,9 @@ python caff_tool.py pack input.toml [output.bin]
 python caff_tool.py pack input.toml [target.bin] [output.bin] --safe
 ```
 
-Или через батники: `caff_unpack.bat <папка>` / `caff_pack.bat <папка>`.
+Пакетно по папке (рекурсивно все `default.bin` ↔ `default.toml`):
+- Windows: `caff_unpack.bat <папка>` / `caff_pack.bat <папка>`
+- Linux/macOS: `bash caff_unpack.sh <папка>` / `bash caff_pack.sh <папка>`
 
 ## Формат TOML
 
