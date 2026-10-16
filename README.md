@@ -48,6 +48,10 @@ Python **3.11+** (uses the standard `tomllib`). No dependencies.
 
 ## Usage
 
+> ⚠️ On Windows, you can use either `python` or `py` to run the script, depending on your Python installation.
+
+> ⚠️ On Linux you may need to use `python3` instead of `python`.
+
 ```bat
 :: .bin -> .toml (with built-in lossless round-trip verification)
 python caff_tool.py unpack input.bin [output.toml]
@@ -59,7 +63,9 @@ python caff_tool.py pack input.toml [output.bin]
 python caff_tool.py pack input.toml [target.bin] [output.bin] --safe
 ```
 
-Or via the batch files: `caff_unpack.bat <folder>` / `caff_pack.bat <folder>`.
+Batch mode (recursively converts all `default.bin` ↔ `default.toml`):
+- Windows: `caff_unpack.bat <folder>` / `caff_pack.bat <folder>`
+- Linux/macOS: `bash caff_unpack.sh <folder>` / `bash caff_pack.sh <folder>`
 
 ## TOML format
 
