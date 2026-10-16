@@ -488,22 +488,54 @@ class CaffTomlConverter:
 
 
 # --- CLI ---
+def exit_with_pause():
+    """Exit program with pause to keep window open."""
+    try:
+        input("\nPress Enter to exit...")
+    except EOFError:
+        pass  # non-interactive run (pipe/redirect) -> exit without pause
+    sys.exit()
+
+def print_usage():
+    """Print usage information and examples for the CLI."""
+    executable_name = os.path.basename(sys.argv[0])
+    print(fr"""
+ ┌─────┐┌─────┐┌─────┐┌─────┐  ┌─────┐┌─────┐┌─────┐┌─┐
+ │ ┌───┘│ ┌─┐ ││ ┌───┘│ ┌───┘  └─┐ ┌─┘│ ┌─┐ ││ ┌─┐ ││ │
+ │ │    │ └─┘ ││ └──┐ │ └──┐     │ │  │ │ │ ││ │ │ ││ │
+ │ │    │ ┌─┐ ││ ┌──┘ │ ┌──┘     │ │  │ │ │ ││ │ │ ││ │
+ │ └───┐│ │ │ ││ │    │ │        │ │  │ └─┘ ││ └─┘ ││ └───┐
+ └─────┘└─┘ └─┘└─┘    └─┘        └─┘  └─────┘└─────┘└─────┘
+
+Usage:
+  {executable_name} unpack input.bin [output.toml]
+  {executable_name} pack input.toml [output.bin]
+  {executable_name} pack input.toml [target.bin] [output.bin] --safe
+
+Modes:
+  unpack               .bin -> .toml (with lossless round-trip verification)
+  pack                 .toml -> .bin (from embedded template_hex)
+  pack --safe          patch a live .bin (overwrites target, or writes [output.bin])
+
+Notes:
+  - Only equal-length strings are patched in place (byte-exact).
+  - Any length change triggers a full CAFF rebuild: LSBL offset table,
+    size fields and header checksum are recalculated automatically.
+""")
+    exit_with_pause()
+
 if __name__ == "__main__":
     is_safe = "--safe" in sys.argv
     cli_args = [arg for arg in sys.argv[1:] if arg != "--safe"]
 
     if len(cli_args) < 2:
-        print("Usage:")
-        print("  Unpack: python caff_tool.py unpack input.bin [output.toml]")
-        print("  Pack:   python caff_tool.py pack input.toml [target.bin] [output.bin] [--safe]")
-        print()
-        print("Notes:")
-        print("  - Equal-length strings are patched in place (byte-exact).")
-        print("  - Any length change triggers a full CAFF rebuild: LSBL offset table,")
-        print("    size fields and header checksum are recalculated automatically.")
-        sys.exit(1)
+        print_usage()
 
     mode = cli_args[0].lower()
+
+    if not os.path.exists(cli_args[1]):
+        print(f"[ERROR] File not found: {cli_args[1]}")
+        sys.exit(1)
 
     if mode == "unpack":
         in_bin_path = cli_args[1]
