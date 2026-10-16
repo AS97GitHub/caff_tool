@@ -174,6 +174,13 @@ class CaffTomlConverter:
     def _s(value: str) -> str:
         return json.dumps(value, ensure_ascii=False).replace("\x7f", "\\u007f")
 
+    @staticmethod
+    def _sl(value: str) -> str:
+        """TOML literal string (single quotes, no escapes) when safe."""
+        if value and not re.search(r"[\x00-\x1f\x7f']", value):
+            return "'" + value + "'"
+        return CaffTomlConverter._s(value)
+
     # ------------------------------------------------------------------
     # Expand TOML entries into flat patch items:
     #   (offset, max_bytes, text, label)
@@ -199,12 +206,18 @@ class CaffTomlConverter:
         items = []
         for i, entry in enumerate(entries):
             label = entry.get("key", f"Entry #{i+1}")
+            # compound "A|B|C" resolves via base "A"; but a real key that
+            # literally contains '|' always wins
+            if label in key2off or "|" not in label:
+                base_label = label
+            else:
+                base_label = label.split("|")[0]
             if "offset" in entry and "max_bytes" in entry:
                 # explicit metadata (old TOMLs) wins
                 off, mb = entry["offset"], entry["max_bytes"]
             else:
                 # resolve by key name via the key-table/line binding
-                off = key2off.get(label)
+                off = key2off.get(base_label)
                 if off is None:
                     raise ValueError(
                         f"Key '{label}' not found in binary; cannot map entry."
@@ -217,10 +230,10 @@ class CaffTomlConverter:
                 ("scale", "_SCALE"),
             ):
                 if field in entry:
-                    poff = key2off.get(label + suffix)
+                    poff = key2off.get(base_label + suffix)
                     if poff is None:
                         raise ValueError(
-                            f"Key '{label + suffix}' not found in binary; "
+                            f"Key '{base_label + suffix}' not found in binary; "
                             f"cannot map '{field}'."
                         )
                     items.append((poff, off2len[poff], entry[field], label + suffix))
@@ -233,9 +246,12 @@ class CaffTomlConverter:
     @staticmethod
     def _apply_items(raw_data: bytearray, items: list) -> bytes:
         encoded = [text.encode("utf-16le") for (_o, _m, text, _l) in items]
+        # In-place patching is safe ONLY for exact-length replacements:
+        # shorter strings padded with NULs would leave embedded zero-wchars
+        # inside the string (the engine reads by LSBL length), breaking it.
         oversized = [
             i for i, (_o, mb, _t, _l) in enumerate(items)
-            if len(encoded[i]) > mb
+            if len(encoded[i]) != mb
         ]
 
         if not oversized:
@@ -262,7 +278,7 @@ class CaffTomlConverter:
             new_strs[idx] = enc + b"\x00\x00"
             rebuilt.add(idx)
 
-        print("\n[INFO] String(s) exceed original buffer -> full CAFF rebuild:")
+        print("\n[INFO] String(s) changed length -> full CAFF rebuild:")
         for idx in sorted(rebuilt):
             abs_off = parsed["txt_start"] + parsed["starts"][idx][1] * 2
             print(f"  + '{offset2label.get(abs_off, '#' + str(idx))}' "
@@ -311,6 +327,7 @@ class CaffTomlConverter:
                     base = by_key.get(r["key"][: -len(suffix)])
                     if base is not None and field not in base:
                         base[field] = r["text"]
+                        base.setdefault("_members", [base["key"]]).append(r["key"])
                         consumed.add(id(r))
                     break
         merged = [r for r in records if id(r) not in consumed]
@@ -339,7 +356,7 @@ class CaffTomlConverter:
         # Construct TOML
         toml_lines = [
             "[meta]",
-            f"build_path = {CaffTomlConverter._s(build_path)}",
+            f"build_path = {CaffTomlConverter._sl(build_path)}",
             "",
             "[script]",
             f"audio_meta = {CaffTomlConverter._s(audio_meta)}",
@@ -348,7 +365,18 @@ class CaffTomlConverter:
 
         for r in merged:
             toml_lines.append("[[entries]]")
-            toml_lines.append(f"key = {CaffTomlConverter._s(r['key'])}")
+            if "_members" in r:
+                rank = {"_POSITION_X": 0, "_POSITION_Y": 1, "_SCALE": 2}
+                rest = sorted(
+                    r["_members"][1:],
+                    key=lambda k: next(
+                        (v for s, v in rank.items() if k.endswith(s)), 9
+                    ),
+                )
+                display_key = "|".join([r["_members"][0]] + rest)
+            else:
+                display_key = r["key"]
+            toml_lines.append(f"key = {CaffTomlConverter._s(display_key)}")
             for field in ("position_x", "position_y", "scale"):
                 if field in r:
                     toml_lines.append(f"{field} = {CaffTomlConverter._s(r[field])}")
@@ -422,11 +450,11 @@ class CaffTomlConverter:
         warnings = []
         for (off, mb, text, label) in items:
             new_len = len(text.encode("utf-16le"))
-            if new_len > mb:
+            if new_len != mb:
                 warnings.append((label, new_len, mb))
 
         if warnings:
-            print(f"\n[INFO] {len(warnings)} string(s) are longer than the original buffer.")
+            print(f"\n[INFO] {len(warnings)} string(s) changed length.")
             print(       "       They will be inserted via full CAFF rebuild (offsets/checksum auto-fixed).")
             for label, new_len, old_len in warnings:
                 print(f"       ~ '{label}': {old_len} -> {new_len} bytes")
@@ -470,8 +498,8 @@ if __name__ == "__main__":
         print("  Pack:   python caff_tool.py pack input.toml [target.bin] [output.bin] [--safe]")
         print()
         print("Notes:")
-        print("  - Strings shorter/equal than original are patched in place (byte-exact).")
-        print("  - Longer strings trigger a full CAFF rebuild: LSBL offset table,")
+        print("  - Equal-length strings are patched in place (byte-exact).")
+        print("  - Any length change triggers a full CAFF rebuild: LSBL offset table,")
         print("    size fields and header checksum are recalculated automatically.")
         sys.exit(1)
 
@@ -537,4 +565,3 @@ if __name__ == "__main__":
                 f.write(modded_bin)
 
             print(f"[SUCCESS] Repacked {in_toml_path} -> {out_bin_path}")
-
