@@ -1,0 +1,96 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" width="100%" height="100%">
+  <defs>
+    <style>
+      .bg { fill: #1e1e1e; }
+      .titlebar { fill: #2d2d2d; }
+      .window-border { fill: none; stroke: #454545; stroke-width: 2; }
+      .text-title { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; font-size: 13px; fill: #d4d4d4; font-weight: 500; }
+      .btn { fill: #2d2d2d; }
+      .btn:hover { fill: #444444; }
+      .btn-close:hover { fill: #e81123; }
+      .btn-text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 12px; fill: #d4d4d4; text-anchor: middle; dominant-baseline: central; }
+      .scrollbar-track { fill: #252525; }
+      .scrollbar-thumb { fill: #424242; rx: 3; }
+      
+      /* Основной стек шрифтов GitHub для моноширинного текста (Code/Terminal) */
+      .console-text { 
+        font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace; 
+        font-size: 13px; 
+        fill: #d4d4d4; 
+        white-space: pre; 
+        line-height: 1.45;
+      }
+    </style>
+  </defs>
+
+  <!-- Окно приложения -->
+  <rect width="900" height="520" rx="6" class="bg" />
+  <rect width="900" height="520" rx="6" class="window-border" />
+
+  <!-- Шапка окна (Titlebar) -->
+  <path d="M 1 7 C 1 3, 3 1, 7 1 L 893 1 C 897 1, 899 3, 899 7 L 899 32 L 1 32 Z" class="titlebar" />
+  
+  <!-- Иконка окна (ᴥ) -->
+  <text x="16" y="20" class="console-text" style="fill: #4ec9b0; font-size: 15px;">ᴥ</text>
+  
+  <!-- Заголовок -->
+  <text x="38" y="20" class="text-title" dominant-baseline="central">CAFF_Tool.exe</text>
+
+  <!-- Кнопки управления окном -->
+  <!-- Свернуть -->
+  <g transform="translate(772, 1)">
+    <rect width="42" height="31" class="btn" />
+    <text x="21" y="16" class="btn-text">🗕</text>
+  </g>
+  <!-- Развернуть -->
+  <g transform="translate(814, 1)">
+    <rect width="42" height="31" class="btn" />
+    <text x="21" y="16" class="btn-text">🗖</text>
+  </g>
+  <!-- Закрыть -->
+  <g transform="translate(856, 1)">
+    <path d="M 0 0 L 42 0 L 42 30 L 0 30 Z" class="btn btn-close" />
+    <text x="21" y="16" class="btn-text">✕</text>
+  </g>
+
+  <!-- Скроллбар справа -->
+  <rect x="874" y="33" width="25" height="486" class="scrollbar-track" />
+  <!-- Кнопки скроллбара (стрелки) и ползунок -->
+  <path d="M 886.5 40 L 891.5 48 L 881.5 48 Z" fill="#858585" />
+  <path d="M 886.5 504 L 891.5 496 L 881.5 496 Z" fill="#858585" />
+  <rect x="878" y="56" width="17" height="110" class="scrollbar-thumb" />
+
+  <!-- Контент терминала -->
+  <g transform="translate(20, 48)">
+    <text x="0" y="0" class="console-text">
+      <!-- Логотип CAFF TOOL -->
+      <tspan x="0" y="10" fill="#4ec9b0"> ┌─────┐ ┌─────┐ ┌─────┐ ┌─────┐   ┌─────┐ ┌─────┐ ┌─────┐ ┌─┐ </tspan>
+      <tspan x="0" y="28" fill="#4ec9b0"> │ ┌───┘ │ ┌─┐ │ │ ┌───┘ │ ┌───┘   └─┐ ┌─┘ │ ┌─┐ │ │ ┌─┐ │ │ │ </tspan>
+      <tspan x="0" y="46" fill="#4ec9b0"> │ │     │ └─┘ │ │ └──┐  │ └──┐      │ │   │ │ │ │ │ │ │ │ │ │ </tspan>
+      <tspan x="0" y="64" fill="#4ec9b0"> │ │     │ ┌─┐ │ │ ┌──┘  │ ┌──┘      │ │   │ │ │ │ │ │ │ │ │ │ </tspan>
+      <tspan x="0" y="82" fill="#4ec9b0"> │ └───┐ │ │ │ │ │ │     │ │         │ │   │ └─┘ │ │ └─┘ │ │ └───┐ </tspan>
+      <tspan x="0" y="100" fill="#4ec9b0"> └─────┘ └─┘ └─┘ └─┘     └─┘         └─┘   └─────┘ └─────┘ └─────┘ </tspan>
+
+      <!-- Usage -->
+      <tspan x="0" y="140" fill="#79c0ff" font-weight="600">Usage:</tspan>
+      <tspan x="20" y="162">  <tspan fill="#ffa657">CAFF_Tool.exe</tspan> <tspan fill="#d2a8ff">unpack</tspan> input.bin [output.toml]</tspan>
+      <tspan x="20" y="182">  <tspan fill="#ffa657">CAFF_Tool.exe</tspan> <tspan fill="#d2a8ff">pack</tspan> input.toml [output.bin]</tspan>
+      <tspan x="20" y="202">  <tspan fill="#ffa657">CAFF_Tool.exe</tspan> <tspan fill="#d2a8ff">pack</tspan> input.toml [target.bin] [output.bin] <tspan fill="#79c0ff">--safe</tspan></tspan>
+
+      <!-- Modes -->
+      <tspan x="0" y="242" fill="#79c0ff" font-weight="600">Modes:</tspan>
+      <tspan x="20" y="264">  <tspan fill="#d2a8ff">unpack</tspan>               .bin -> .toml <tspan fill="#8b949e">(with lossless round-trip verification)</tspan></tspan>
+      <tspan x="20" y="284">  <tspan fill="#d2a8ff">pack</tspan>                 .toml -> .bin <tspan fill="#8b949e">(from embedded template_hex)</tspan></tspan>
+      <tspan x="20" y="304">  <tspan fill="#d2a8ff">pack --safe</tspan>          patch a live .bin <tspan fill="#8b949e">(overwrites target, or writes [output.bin])</tspan></tspan>
+
+      <!-- Notes -->
+      <tspan x="0" y="344" fill="#79c0ff" font-weight="600">Notes:</tspan>
+      <tspan x="20" y="366">  - Only equal-length strings are patched in place <tspan fill="#8b949e">(byte-exact)</tspan>.</tspan>
+      <tspan x="20" y="386">  - Any length change triggers a full CAFF rebuild: LSBL offset table,</tspan>
+      <tspan x="20" y="406">    size fields and header checksum are recalculated automatically.</tspan>
+
+      <!-- Footer prompt -->
+      <tspan x="0" y="450" fill="#e6edf3">Press Enter to exit...</tspan>
+    </text>
+  </g>
+</svg>
