@@ -1,33 +1,6 @@
-```
-┌─────────────────────────────────────────────────────────────────────────────────────────┐
-│ ᴥ CAFF_Tool.exe                                                               ─   □   × │
-├───────────────────────────────────────────────────────────────────────────────────────┬─┤
-│ ┌─────┐┌─────┐┌─────┐┌─────┐  ┌─────┐┌─────┐┌─────┐┌─┐                                │▲│
-│ │ ┌───┘│ ┌─┐ ││ ┌───┘│ ┌───┘  └─┐ ┌─┘│ ┌─┐ ││ ┌─┐ ││ │                                │█│
-│ │ │    │ └─┘ ││ └──┐ │ └──┐     │ │  │ │ │ ││ │ │ ││ │                                │█│
-│ │ │    │ ┌─┐ ││ ┌──┘ │ ┌──┘     │ │  │ │ │ ││ │ │ ││ │                                │ │
-│ │ └───┐│ │ │ ││ │    │ │        │ │  │ └─┘ ││ └─┘ ││ └───┐                            │ │
-│ └─────┘└─┘ └─┘└─┘    └─┘        └─┘  └─────┘└─────┘└─────┘                            │ │
-│                                                                                       │ │
-│Usage:                                                                                 │ │
-│  CAFF_Tool.exe unpack input.bin [output.toml]                                         │ │
-│  CAFF_Tool.exe pack input.toml [output.bin]                                           │ │
-│  CAFF_Tool.exe pack input.toml [target.bin] [output.bin] --safe                       │ │
-│                                                                                       │ │
-│Modes:                                                                                 │ │
-│  unpack               .bin -> .toml (with lossless round-trip verification)           │ │
-│  pack                 .toml -> .bin (from embedded template_hex)                      │ │
-│  pack --safe          patch a live .bin (overwrites target, or writes [output.bin])   │ │
-│                                                                                       │ │
-│Notes:                                                                                 │ │
-│  - Only equal-length strings are patched in place (byte-exact).                       │ │
-│  - Any length change triggers a full CAFF rebuild: LSBL offset table,                 │ │
-│    size fields and header checksum are recalculated automatically.                    │ │
-│                                                                                       │ │
-│                                                                                       │ │
-│Press Enter to exit...                                                                 │▼│
-└───────────────────────────────────────────────────────────────────────────────────────┴─┘
-```
+<p align>
+  <img src="images/CLI.svg">
+</p>
 
 ---
 
@@ -153,6 +126,6 @@ LSBL   "LSBL": таблица (u16 line, u32 wchar_offset)+ — смещения
 
 ---
 
-Не аффилировано с Microsoft / Rare. Все торговые марки принадлежат их владельцам.
+Не аффилировано с Microsoft / Rare. Все торговые марки принадлежат их правообладателям.
 Инструмент предназначен для некоммерческого использования (переводы, моддинг,
 исследование форматов).
