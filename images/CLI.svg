@@ -1,10 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600" width="100%" height="100%">
-    <!--
-    Embedded font: Fira Code
-    Copyright: Copyright 2014-2023 The Fira Code Project Authors
-    License: SIL Open Font License 1.1 (OFL)
-    Source: https://github.com/tonsky/FiraCode
-    -->
+  <!--
+  Embedded font: Fira Code
+  Copyright: Copyright 2014-2023 The Fira Code Project Authors
+  License: SIL Open Font License 1.1 (OFL)
+  Source: https://github.com/tonsky/FiraCode
+  -->
 
   <!-- Остальной код SVG -->
   <defs>
@@ -82,14 +82,6 @@
       <tspan x="0" y="64" fill="#4ec9b0"> │ │     │ ┌─┐ │ │ ┌──┘  │ ┌──┘      │ │   │ │ │ │ │ │ │ │ │ │ </tspan>
       <tspan x="0" y="82" fill="#4ec9b0"> │ └───┐ │ │ │ │ │ │     │ │         │ │   │ └─┘ │ │ └─┘ │ │ └───┐ </tspan>
       <tspan x="0" y="100" fill="#4ec9b0"> └─────┘ └─┘ └─┘ └─┘     └─┘         └─┘   └─────┘ └─────┘ └─────┘ </tspan>
-
-      <!-- Логотип CAFF TOOL 2
-      <tspan x="0" y="16" fill="#4ec9b0"> ██████  ██████  ██████  ██████    ██████  ██████  ██████  ██ </tspan>
-      <tspan x="0" y="32" fill="#4ec9b0"> ██      ██  ██  ██      ██          ██    ██  ██  ██  ██  ██ </tspan>
-      <tspan x="0" y="47" fill="#4ec9b0"> ██      ██████  █████   █████       ██    ██  ██  ██  ██  ██ </tspan>
-      <tspan x="0" y="62" fill="#4ec9b0"> ██      ██  ██  ██      ██          ██    ██  ██  ██  ██  ██ </tspan>
-      <tspan x="0" y="77" fill="#4ec9b0"> ██████  ██  ██  ██      ██          ██    ██████  ██████  ██████ </tspan>
-      -->
 
       <!-- Usage -->
       <tspan x="0" y="140" fill="#79c0ff" font-weight="600">Usage:</tspan>
