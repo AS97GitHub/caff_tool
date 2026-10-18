@@ -1,5 +1,5 @@
 <p align>
-  <img src="images/CLI2.svg">
+  <img src="images/CLI.svg">
 </p>
 
 ---
