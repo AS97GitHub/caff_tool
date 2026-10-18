@@ -1,4 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" width="100%" height="100%">
+    <!--
+    Embedded font: Fira Code
+    Copyright: Copyright 2014-2023 The Fira Code Project Authors
+    License: SIL Open Font License 1.1 (OFL)
+    Source: https://github.com/tonsky/FiraCode
+  -->
+
+  <!-- Остальной код SVG -->
   <defs>
     <style>
       @font-face {
