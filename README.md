@@ -125,6 +125,12 @@ tail   LSBL #2 (ASCII keys), debug comments, build_path
 When a text grows, the file tail shifts — hence the rebuild: recalculating
 LSBL #1, section sizes and the checksum.
 
+## Credits
+
+- Font: [Fira Code](https://github.com/tonsky/FiraCode) by Nikita Prokopov,
+  licensed under the [SIL Open Font License 1.1](https://openfontlicense.org
+  )
+
 ---
 
 Not affiliated with Microsoft / Rare. All trademarks are property of their
