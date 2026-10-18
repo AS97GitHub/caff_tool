@@ -106,7 +106,7 @@
       <tspan x="20" y="344">  <tspan fill="#d2a8ff">pack --safe</tspan>  <tspan x="204" y="344">patch a live .bin <tspan fill="#8b949e">(overwrites target, or writes [output.bin])</tspan></tspan></tspan>
       <tspan x="20" y="364">  <tspan fill="#d2a8ff">unpack-all</tspan>  <tspan x="204" y="364">all banks of a language folder -> one combined TOML</tspan></tspan>
       <tspan x="20" y="384">  <tspan fill="#d2a8ff">pack-all</tspan>  <tspan x="204" y="384">combined TOML -> banks patched in the language folder</tspan></tspan>
-      <tspan x="204" y="404">combined TOML -> banks patched in the language folder</tspan>
+      <tspan x="204" y="404">(with [out_dir]: written there, untouched banks copied)</tspan>
 
       <!-- Notes -->
       <tspan x="0" y="424" fill="#79c0ff" font-weight="600">Notes:</tspan>
