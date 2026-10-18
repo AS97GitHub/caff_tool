@@ -50,23 +50,23 @@
 
   <!-- Кнопки управления окном -->
   <!-- Свернуть -->
-  <g transform="translate(772, 1)">
+  <g transform="translate(773, 1)">
     <rect width="42" height="31" class="btn" />
     <path d="M 14 21 H 28" fill="none" stroke="#d4d4d4" stroke-width="1.5" stroke-linecap="square" />
   </g>
   <!-- Развернуть -->
-  <g transform="translate(814, 1)">
+  <g transform="translate(815, 1)">
     <rect width="42" height="31" class="btn" />
     <rect x="15" y="9" width="12" height="12" fill="none" stroke="#d4d4d4" stroke-width="1.5" />
   </g>
   <!-- Закрыть -->
-  <g transform="translate(856, 1)">
-    <path d="M 0 0 L 42 0 L 42 30 L 0 30 Z" class="btn btn-close" />
+  <g transform="translate(857, 1)">
+    <path d="M 0 0 L 36 0 C 40 0, 42 2, 42 6 L 42 31 L 0 31 Z" class="btn btn-close" />
     <path d="M 16 10 L 26 20 M 26 10 L 16 20" fill="none" stroke="#d4d4d4" stroke-width="1.5" stroke-linecap="square" />
   </g>
 
   <!-- Скроллбар справа -->
-  <rect x="874" y="33" width="25" height="686" class="scrollbar-track" />
+  <path d="M 874,33 H 899 V 593 A 6,6 0 0,1 893,599 H 874 Z" class="scrollbar-track" />
   <!-- Кнопки скроллбара (стрелки) и ползунок -->
   <path d="M 886.5 40 L 891.5 48 L 881.5 48 Z" fill="#858585" />
   <path d="M 886.5 589 L 891.5 581 L 881.5 581 Z" fill="#858585" />
