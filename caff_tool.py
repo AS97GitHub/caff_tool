@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import shutil
 import struct
 import sys
 
@@ -9,6 +10,57 @@ try:
 except ImportError:
     print("Error: Python 3.11 or higher is required.")
     sys.exit(1)
+
+
+# --- terminal colors (GitHub Dark palette, 256-color ANSI) ---
+_COLOR = sys.stdout.isatty()
+
+
+def _c(text: str, code: str) -> str:
+    """Wrap text in an ANSI SGR sequence; plain text when not a TTY."""
+    return f"\x1b[{code}m{text}\x1b[0m" if _COLOR else text
+
+
+def _enable_ansi() -> None:
+    """Enable ANSI (VT) processing on the Windows console; no-op elsewhere."""
+    if os.name != "nt":
+        return
+    try:
+        import ctypes
+        kernel32 = ctypes.windll.kernel32
+        handle = kernel32.GetStdHandle(-11)  # STD_OUTPUT_HANDLE
+        mode = ctypes.c_ulong()
+        if kernel32.GetConsoleMode(handle, ctypes.byref(mode)):
+            kernel32.SetConsoleMode(handle, mode.value | 0x0004)
+    except Exception:
+        pass
+
+
+TEAL = "38;5;115"    # #4ec9b0 - logo, frames
+BLACK = "38;2;0;0;0"  # #000000 - logo background cells
+
+
+def _paint_logo(line: str) -> str:
+    """Paint logo cells: solid blocks teal, shade cells black (run-length ANSI)."""
+    if not _COLOR:
+        return line
+    out, prev = [], None
+    for ch in line:
+        color = TEAL if ch == "\u2588" else BLACK
+        if color != prev:
+            out.append(f"\x1b[{color}m")
+            prev = color
+        out.append(ch)
+    out.append("\x1b[0m")
+    return "".join(out)
+BLUE = "38;5;75"     # #79c0ff - headings, flags
+ORANGE = "38;5;215"  # #ffa657 - executable name
+PURPLE = "38;5;183"  # #d2a8ff - commands
+GRAY = "38;5;245"    # #8b949e - comments
+WHITE = "38;5;255"   # #e6edf3 - foreground
+GREEN = "38;5;78"    # #3fb950 - [SUCCESS], [OK]
+RED = "38;5;204"     # #f85149 - [ERROR]
+YELLOW = "38;5;172"  # #d29922 - [WARNING]
 
 
 class CaffTomlConverter:
@@ -278,7 +330,7 @@ class CaffTomlConverter:
             new_strs[idx] = enc + b"\x00\x00"
             rebuilt.add(idx)
 
-        print("\n[INFO] String(s) changed length -> full CAFF rebuild:")
+        print(_c("\n[INFO]", BLUE) + " String(s) changed length -> full CAFF rebuild:")
         for idx in sorted(rebuilt):
             abs_off = parsed["txt_start"] + parsed["starts"][idx][1] * 2
             print(f"  + '{offset2label.get(abs_off, '#' + str(idx))}' "
@@ -289,13 +341,8 @@ class CaffTomlConverter:
         return CaffTomlConverter._rebuild_caff(parsed, new_strs)
 
     @staticmethod
-    def bin_to_toml(bin_bytes: bytes) -> str:
-        if not bin_bytes.startswith(b"CAFF"):
-            raise ValueError("Invalid format: missing CAFF header.")
-
-        # Structural parse: key table -> keys -> LSBL#1 -> exact string boundaries
-        parsed = CaffTomlConverter._parse_caff(bin_bytes)
-
+    def _build_records(parsed: dict) -> list:
+        """Key-bound string records (positions merged into base entries)."""
         # Keys are bound to strings via the source-script line number:
         # key_table.X high 16 bits == LSBL#1 entry line (u16) of the string.
         line2key = {}
@@ -330,7 +377,43 @@ class CaffTomlConverter:
                         base.setdefault("_members", [base["key"]]).append(r["key"])
                         consumed.add(id(r))
                     break
-        merged = [r for r in records if id(r) not in consumed]
+        return [r for r in records if id(r) not in consumed]
+
+    @staticmethod
+    def _entries_lines(merged: list, bank: str = None) -> list:
+        """[[entries]] TOML lines for merged records (optionally tagged with bank)."""
+        toml_lines = []
+        for r in merged:
+            toml_lines.append("[[entries]]")
+            if "_members" in r:
+                rank = {"_POSITION_X": 0, "_POSITION_Y": 1, "_SCALE": 2}
+                rest = sorted(
+                    r["_members"][1:],
+                    key=lambda k: next(
+                        (v for s, v in rank.items() if k.endswith(s)), 9
+                    ),
+                )
+                display_key = "|".join([r["_members"][0]] + rest)
+            else:
+                display_key = r["key"]
+            toml_lines.append(f"key = {CaffTomlConverter._s(display_key)}")
+            if bank is not None:
+                toml_lines.append(f"bank = {CaffTomlConverter._s(bank)}")
+            for field in ("position_x", "position_y", "scale"):
+                if field in r:
+                    toml_lines.append(f"{field} = {CaffTomlConverter._s(r[field])}")
+            toml_lines.append(f"text = {CaffTomlConverter._s(r['text'])}")
+            toml_lines.append("")
+        return toml_lines
+
+    @staticmethod
+    def bin_to_toml(bin_bytes: bytes) -> str:
+        if not bin_bytes.startswith(b"CAFF"):
+            raise ValueError("Invalid format: missing CAFF header.")
+
+        # Structural parse: key table -> keys -> LSBL#1 -> exact string boundaries
+        parsed = CaffTomlConverter._parse_caff(bin_bytes)
+        merged = CaffTomlConverter._build_records(parsed)
 
         # Build Path & Script metadata (informational, lives in the tail)
         remaining = parsed["tail"]
@@ -363,25 +446,7 @@ class CaffTomlConverter:
             "",
         ]
 
-        for r in merged:
-            toml_lines.append("[[entries]]")
-            if "_members" in r:
-                rank = {"_POSITION_X": 0, "_POSITION_Y": 1, "_SCALE": 2}
-                rest = sorted(
-                    r["_members"][1:],
-                    key=lambda k: next(
-                        (v for s, v in rank.items() if k.endswith(s)), 9
-                    ),
-                )
-                display_key = "|".join([r["_members"][0]] + rest)
-            else:
-                display_key = r["key"]
-            toml_lines.append(f"key = {CaffTomlConverter._s(display_key)}")
-            for field in ("position_x", "position_y", "scale"):
-                if field in r:
-                    toml_lines.append(f"{field} = {CaffTomlConverter._s(r[field])}")
-            toml_lines.append(f"text = {CaffTomlConverter._s(r['text'])}")
-            toml_lines.append("")
+        toml_lines.extend(CaffTomlConverter._entries_lines(merged))
 
         toml_lines.append("[binary]")
         toml_lines.append(f'template_hex = "{bin_bytes.hex()}"\n')
@@ -440,7 +505,7 @@ class CaffTomlConverter:
                 print(
                     f"[WARNING] Could not find {target_desc} and TOML lacks template_hex field."
                 )
-                input("Execution paused. Press Enter to exit...")
+                input(_c("Execution paused. Press Enter to exit...", WHITE))
                 sys.exit(1)
 
         entries = parsed.get("entries", [])
@@ -454,12 +519,104 @@ class CaffTomlConverter:
                 warnings.append((label, new_len, mb))
 
         if warnings:
-            print(f"\n[INFO] {len(warnings)} string(s) changed length.")
+            print(f"\n{_c('[INFO]', BLUE)} {len(warnings)} string(s) changed length.")
             print(       "       They will be inserted via full CAFF rebuild (offsets/checksum auto-fixed).")
             for label, new_len, old_len in warnings:
                 print(f"       ~ '{label}': {old_len} -> {new_len} bytes")
 
         return CaffTomlConverter._apply_items(raw_data, items)
+
+    @staticmethod
+    def unpack_all(lang_dir: str, out_toml: str) -> None:
+        """All banks of a language folder into a single combined TOML."""
+        lang_dir = lang_dir.rstrip("/\\")
+        banks = sorted(
+            d for d in os.listdir(lang_dir)
+            if os.path.isfile(os.path.join(lang_dir, d, "default.bin"))
+        )
+        if not banks:
+            raise ValueError(f"No default.bin found in subfolders of '{lang_dir}'")
+
+        toml_lines = [
+            "[meta]",
+            f"language_dir = {CaffTomlConverter._s(lang_dir)}",
+            f"bank_count = {len(banks)}",
+            "",
+        ]
+        total_entries = 0
+        for bank in banks:
+            with open(os.path.join(lang_dir, bank, "default.bin"), "rb") as f:
+                data = f.read()
+            parsed = CaffTomlConverter._parse_caff(data)
+            merged = CaffTomlConverter._build_records(parsed)
+            total_entries += len(merged)
+            toml_lines.extend(CaffTomlConverter._entries_lines(merged, bank=bank))
+        with open(out_toml, "w", encoding="utf-8") as f:
+            f.write("\n".join(toml_lines))
+        print(f"{_c('[SUCCESS]', GREEN)} {len(banks)} banks, {total_entries} entries -> {out_toml}")
+
+    @staticmethod
+    def pack_all(toml_path: str, lang_dir: str, out_dir: str = None) -> None:
+        """Distribute a combined TOML back into the banks of a language folder.
+
+        If out_dir is given, patched banks are written there (folder structure
+        preserved, untouched banks copied as-is) instead of overwriting lang_dir.
+        """
+        with open(toml_path, "r", encoding="utf-8") as f:
+            combined = tomllib.loads(f.read())
+        entries = combined.get("entries", [])
+        lang_dir = lang_dir.rstrip("/\\")
+        out_dir = out_dir.rstrip("/\\") if out_dir else None
+        mirror = bool(out_dir) and os.path.abspath(out_dir) != os.path.abspath(lang_dir)
+        if mirror:
+            os.makedirs(out_dir, exist_ok=True)
+
+        by_bank = {}
+        for e in entries:
+            bank = e.get("bank")
+            if not bank:
+                raise ValueError(
+                    f"Entry '{e.get('key')}' has no 'bank' field - "
+                    f"this is not a combined TOML (use 'pack' instead)"
+                )
+            by_bank.setdefault(bank, []).append(e)
+
+        if mirror:
+            # copy banks that have no entries in the TOML, so out_dir is complete
+            for bank in sorted(os.listdir(lang_dir)):
+                src = os.path.join(lang_dir, bank, "default.bin")
+                if os.path.isfile(src) and bank not in by_bank:
+                    dst = os.path.join(out_dir, bank)
+                    os.makedirs(dst, exist_ok=True)
+                    shutil.copyfile(src, os.path.join(dst, "default.bin"))
+                    print(f"{_c('[OK]', GREEN)} {bank}: copied unchanged")
+
+        n_banks = 0
+        for bank, bank_entries in sorted(by_bank.items()):
+            bin_path = os.path.join(lang_dir, bank, "default.bin")
+            if not os.path.exists(bin_path):
+                print(f"{_c('[WARNING]', YELLOW)} {bin_path} not found, bank '{bank}' skipped")
+                continue
+            with open(bin_path, "rb") as f:
+                raw = bytearray(f.read())
+            items = CaffTomlConverter._collect_items(bytes(raw), bank_entries)
+            changed = sum(
+                1 for (_o, mb, t, _l) in items
+                if len(t.encode("utf-16le")) != mb
+            )
+            out = CaffTomlConverter._apply_items(raw, items)
+            out_path = bin_path
+            if mirror:
+                out_dir_bank = os.path.join(out_dir, bank)
+                os.makedirs(out_dir_bank, exist_ok=True)
+                out_path = os.path.join(out_dir_bank, "default.bin")
+            with open(out_path, "wb") as f:
+                f.write(out)
+            n_banks += 1
+            tag = "rebuild" if changed else "in-place"
+            print(f"{_c('[OK]', GREEN)} {bank}: {len(bank_entries)} entries ({tag})")
+        dest = out_dir if mirror else lang_dir
+        print(f"{_c('[SUCCESS]', GREEN)} {n_banks} banks written to '{dest}'")
 
     @staticmethod
     def verify_lossless(
@@ -491,40 +648,61 @@ class CaffTomlConverter:
 def exit_with_pause():
     """Exit program with pause to keep window open."""
     try:
-        input("\nPress Enter to exit...")
+        input(_c("\nPress Enter to exit...", WHITE))
     except EOFError:
         pass  # non-interactive run (pipe/redirect) -> exit without pause
     sys.exit()
 
 def print_usage():
-    """Print usage information and examples for the CLI."""
+    """Print usage information and examples for the CLI (GitHub Dark style)."""
     executable_name = os.path.basename(sys.argv[0])
-    print(fr"""
- ┌─────┐┌─────┐┌─────┐┌─────┐  ┌─────┐┌─────┐┌─────┐┌─┐
- │ ┌───┘│ ┌─┐ ││ ┌───┘│ ┌───┘  └─┐ ┌─┘│ ┌─┐ ││ ┌─┐ ││ │
- │ │    │ └─┘ ││ └──┐ │ └──┐     │ │  │ │ │ ││ │ │ ││ │
- │ │    │ ┌─┐ ││ ┌──┘ │ ┌──┘     │ │  │ │ │ ││ │ │ ││ │
- │ └───┐│ │ │ ││ │    │ │        │ │  │ └─┘ ││ └─┘ ││ └───┐
- └─────┘└─┘ └─┘└─┘    └─┘        └─┘  └─────┘└─────┘└─────┘
+    logo = [
+        "░██████░░██████░░██████░░██████░░░░██████░░██████░░██████░░██░░░░░",
+        "░██░░░░░░██░░██░░██░░░░░░██░░░░░░░░░░██░░░░██░░██░░██░░██░░██░░░░░",
+        "░██░░░░░░██████░░█████░░░█████░░░░░░░██░░░░██░░██░░██░░██░░██░░░░░",
+        "░██░░░░░░██░░██░░██░░░░░░██░░░░░░░░░░██░░░░██░░██░░██░░██░░██░░░░░",
+        "░██████░░██░░██░░██░░░░░░██░░░░░░░░░░██░░░░██████░░██████░░██████░",
+    ]
+    h = _c("Usage:", BLUE + ";1")
+    m = _c("Modes:", BLUE + ";1")
+    n = _c("Notes:", BLUE + ";1")
+    e = _c(executable_name, ORANGE)
 
-Usage:
-  {executable_name} unpack input.bin [output.toml]
-  {executable_name} pack input.toml [output.bin]
-  {executable_name} pack input.toml [target.bin] [output.bin] --safe
+    def row(cmd, desc, comment=""):
+        c = _c(cmd, PURPLE) if cmd else ""
+        line = "  " + c + " " * max(1, 21 - len(cmd)) + desc
+        if comment:
+            line += " " + _c(comment, GRAY)
+        print(line)
 
-Modes:
-  unpack               .bin -> .toml (with lossless round-trip verification)
-  pack                 .toml -> .bin (from embedded template_hex)
-  pack --safe          patch a live .bin (overwrites target, or writes [output.bin])
-
-Notes:
-  - Only equal-length strings are patched in place (byte-exact).
-  - Any length change triggers a full CAFF rebuild: LSBL offset table,
-    size fields and header checksum are recalculated automatically.
-""")
+    print()
+    for line in logo:
+        print(_paint_logo(line))
+    print()
+    print(h)
+    print(f"  {e} {_c('unpack', PURPLE)} input.bin [output.toml]")
+    print(f"  {e} {_c('pack', PURPLE)} input.toml [output.bin]")
+    print(f"  {e} {_c('pack', PURPLE)} input.toml [target.bin] [output.bin] {_c('--safe', BLUE)}")
+    print(f"  {e} {_c('unpack-all', PURPLE)} <lang_dir> <output.toml>")
+    print(f"  {e} {_c('pack-all', PURPLE)} <combined.toml> <lang_dir> [out_dir]")
+    print()
+    print(m)
+    row("unpack", ".bin -> .toml", "(with lossless round-trip verification)")
+    row("pack", ".toml -> .bin", "(from embedded template_hex)")
+    row("pack --safe", "patch a live .bin", "(overwrites target, or writes [output.bin])")
+    row("unpack-all", "all banks of a language folder -> one combined TOML")
+    row("pack-all", "combined TOML -> banks patched in the language folder")
+    row("", "(with [out_dir]: written there, untouched banks copied)")
+    print()
+    print(n)
+    print("  - Only equal-length strings are patched in place " + _c("(byte-exact)", GRAY) + ".")
+    print("  - Any length change triggers a full CAFF rebuild: LSBL offset table,")
+    print("    size fields and header checksum are recalculated automatically.")
+    print()
     exit_with_pause()
 
 if __name__ == "__main__":
+    _enable_ansi()
     is_safe = "--safe" in sys.argv
     cli_args = [arg for arg in sys.argv[1:] if arg != "--safe"]
 
@@ -534,10 +712,22 @@ if __name__ == "__main__":
     mode = cli_args[0].lower()
 
     if not os.path.exists(cli_args[1]):
-        print(f"[ERROR] File not found: {cli_args[1]}")
+        print(f"{_c('[ERROR]', RED)} File not found: {cli_args[1]}")
         sys.exit(1)
 
-    if mode == "unpack":
+    if mode == "unpack-all":
+        if len(cli_args) < 3:
+            print(_c('[ERROR]', RED) + " unpack-all requires: <lang_dir> <output.toml>")
+            sys.exit(1)
+        CaffTomlConverter.unpack_all(cli_args[1], cli_args[2])
+
+    elif mode == "pack-all":
+        if len(cli_args) < 3:
+            print(_c('[ERROR]', RED) + " pack-all requires: <combined.toml> <lang_dir> [out_dir]")
+            sys.exit(1)
+        CaffTomlConverter.pack_all(cli_args[1], cli_args[2], cli_args[3] if len(cli_args) > 3 else None)
+
+    elif mode == "unpack":
         in_bin_path = cli_args[1]
         out_toml_path = (
             cli_args[2]
@@ -554,7 +744,7 @@ if __name__ == "__main__":
             original_data, generated_toml
         )
         if not is_lossless:
-            print(f"[ERROR] Lossless verification failed for '{in_bin_path}'!")
+            print(f"{_c('[ERROR]', RED)} Lossless verification failed for '{in_bin_path}'!")
             print(f"        Details: {status_msg}")
             sys.exit(1)
 
@@ -596,4 +786,4 @@ if __name__ == "__main__":
             with open(out_bin_path, "wb") as f:
                 f.write(modded_bin)
 
-            print(f"[SUCCESS] Repacked {in_toml_path} -> {out_bin_path}")
+            print(f"{_c('[SUCCESS]', GREEN)} Repacked {in_toml_path} -> {out_bin_path}")
