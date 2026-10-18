@@ -93,26 +93,26 @@
 
       <!-- Usage -->
       <tspan x="0" y="140" fill="#79c0ff" font-weight="600">Usage:</tspan>
-      <tspan x="20" y="162">  <tspan fill="#ffa657">CAFF_Tool.exe</tspan> <tspan fill="#d2a8ff">unpack</tspan> input.bin [output.toml]</tspan>
-      <tspan x="20" y="182">  <tspan fill="#ffa657">CAFF_Tool.exe</tspan> <tspan fill="#d2a8ff">pack</tspan> input.toml [output.bin]</tspan>
-      <tspan x="20" y="202">  <tspan fill="#ffa657">CAFF_Tool.exe</tspan> <tspan fill="#d2a8ff">pack</tspan> input.toml [target.bin] [output.bin] <tspan fill="#79c0ff">--safe</tspan></tspan>
-      <tspan x="20" y="222">  <tspan fill="#ffa657">CAFF_Tool.exe</tspan> <tspan fill="#d2a8ff">unpack-all</tspan> &lt;lang_dir&gt; &lt;output.toml&gt;</tspan>
-       <tspan x="20" y="242">  <tspan fill="#ffa657">CAFF_Tool.exe</tspan> <tspan fill="#d2a8ff">pack-all</tspan> &lt;combined.toml&gt; &lt;lang_dir&gt; [out_dir]</tspan>
+      <tspan x="35" y="162"><tspan fill="#ffa657">CAFF_Tool.exe</tspan> <tspan fill="#d2a8ff">unpack</tspan> input.bin [output.toml]</tspan>
+      <tspan x="35" y="182"><tspan fill="#ffa657">CAFF_Tool.exe</tspan> <tspan fill="#d2a8ff">pack</tspan> input.toml [output.bin]</tspan>
+      <tspan x="35" y="202"><tspan fill="#ffa657">CAFF_Tool.exe</tspan> <tspan fill="#d2a8ff">pack</tspan> input.toml [target.bin] [output.bin] <tspan fill="#79c0ff">--safe</tspan></tspan>
+      <tspan x="35" y="222"><tspan fill="#ffa657">CAFF_Tool.exe</tspan> <tspan fill="#d2a8ff">unpack-all</tspan> &lt;lang_dir&gt; &lt;output.toml&gt;</tspan>
+      <tspan x="35" y="242"><tspan fill="#ffa657">CAFF_Tool.exe</tspan> <tspan fill="#d2a8ff">pack-all</tspan> &lt;combined.toml&gt; &lt;lang_dir&gt; [out_dir]</tspan>
 
       <!-- Modes -->
       <tspan x="0" y="282" fill="#79c0ff" font-weight="600">Modes:</tspan>
-      <tspan x="20" y="304">  <tspan fill="#d2a8ff">unpack</tspan>  <tspan x="204" y="304">.bin -&gt; .toml <tspan fill="#8b949e">(with lossless round-trip verification)</tspan></tspan></tspan>
-      <tspan x="20" y="324">  <tspan fill="#d2a8ff">pack</tspan>  <tspan x="204" y="324">.toml -&gt; .bin <tspan fill="#8b949e">(from embedded template_hex)</tspan></tspan></tspan>
-      <tspan x="20" y="344">  <tspan fill="#d2a8ff">pack --safe</tspan>  <tspan x="204" y="344">patch a live .bin <tspan fill="#8b949e">(overwrites target, or writes [output.bin])</tspan></tspan></tspan>
-      <tspan x="20" y="364">  <tspan fill="#d2a8ff">unpack-all</tspan>  <tspan x="204" y="364">all banks of a language folder -> one combined TOML</tspan></tspan>
-      <tspan x="20" y="384">  <tspan fill="#d2a8ff">pack-all</tspan>  <tspan x="204" y="384">combined TOML -> banks patched in the language folder</tspan></tspan>
+      <tspan x="35" y="304"><tspan fill="#d2a8ff">unpack</tspan><tspan x="204" y="304">.bin -&gt; .toml <tspan fill="#8b949e">(with lossless round-trip verification)</tspan></tspan></tspan>
+      <tspan x="35" y="324"><tspan fill="#d2a8ff">pack</tspan><tspan x="204" y="324">.toml -&gt; .bin <tspan fill="#8b949e">(from embedded template_hex)</tspan></tspan></tspan>
+      <tspan x="35" y="344"><tspan fill="#d2a8ff">pack --safe</tspan><tspan x="204" y="344">patch a live .bin <tspan fill="#8b949e">(overwrites target, or writes [output.bin])</tspan></tspan></tspan>
+      <tspan x="35" y="364"><tspan fill="#d2a8ff">unpack-all</tspan><tspan x="204" y="364">all banks of a language folder -> one combined TOML</tspan></tspan>
+      <tspan x="35" y="384"><tspan fill="#d2a8ff">pack-all</tspan><tspan x="204" y="384">combined TOML -> banks patched in the language folder</tspan></tspan>
       <tspan x="204" y="404">(with [out_dir]: written there, untouched banks copied)</tspan>
 
       <!-- Notes -->
       <tspan x="0" y="424" fill="#79c0ff" font-weight="600">Notes:</tspan>
-      <tspan x="20" y="446">  - Only equal-length strings are patched in place <tspan fill="#8b949e">(byte-exact)</tspan>.</tspan>
-      <tspan x="20" y="466">  - Any length change triggers a full CAFF rebuild: LSBL offset table,</tspan>
-      <tspan x="20" y="486">    size fields and header checksum are recalculated automatically.</tspan>
+      <tspan x="35" y="446">- Only equal-length strings are patched in place <tspan fill="#8b949e">(byte-exact)</tspan>.</tspan>
+      <tspan x="35" y="466">- Any length change triggers a full CAFF rebuild: LSBL offset table,</tspan>
+      <tspan x="50" y="486">size fields and header checksum are recalculated automatically.</tspan>
 
       <!-- Footer prompt -->
       <tspan x="0" y="530" fill="#e6edf3">Press Enter to exit...</tspan>
