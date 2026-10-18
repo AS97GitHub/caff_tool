@@ -65,6 +65,10 @@ python caff_tool.py pack input.toml [output.bin]
 
 :: патчинг живого .bin (перезаписывает его!)
 python caff_tool.py pack input.toml [target.bin] [output.bin] --safe
+
+:: весь язык одним файлом (все банки папки -> один TOML и обратно)
+python caff_tool.py unpack-all text/English English.toml
+python caff_tool.py pack-all English.toml text/English [text/Russian]
 ```
 
 Пакетно по папке (рекурсивно все `default.bin` ↔ `default.toml`):
@@ -127,8 +131,7 @@ LSBL   "LSBL": таблица (u16 line, u32 wchar_offset)+ — смещения
 ## Credits
 
 - Font: [Fira Code](https://github.com/tonsky/FiraCode) by Nikita Prokopov,
-  licensed under the [SIL Open Font License 1.1](https://openfontlicense.org
-  )
+  licensed under the [SIL Open Font License 1.1](https://openfontlicense.org)
 
 ---
 

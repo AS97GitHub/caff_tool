@@ -65,6 +65,10 @@ python caff_tool.py pack input.toml [output.bin]
 
 :: patch a live .bin (overwrites it!)
 python caff_tool.py pack input.toml [target.bin] [output.bin] --safe
+
+:: whole language in one file (all banks in a folder -> one TOML and back)
+python caff_tool.py unpack-all text/English English.toml
+python caff_tool.py pack-all English.toml text/English [text/Russian]
 ```
 
 Batch mode (recursively converts all `default.bin` ↔ `default.toml`):
@@ -128,8 +132,7 @@ LSBL #1, section sizes and the checksum.
 ## Credits
 
 - Font: [Fira Code](https://github.com/tonsky/FiraCode) by Nikita Prokopov,
-  licensed under the [SIL Open Font License 1.1](https://openfontlicense.org
-  )
+  licensed under the [SIL Open Font License 1.1](https://openfontlicense.org)
 
 ---
 
