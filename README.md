@@ -1,5 +1,5 @@
 <p align>
-  <img src="images/CLI.svg">
+  <img src="images/caff-tool.svg">
 </p>
 
 ---
