@@ -52,6 +52,10 @@ unpacks them into editable TOML and repacks with support for strings of **any le
   <img src="images/CLI.svg">
 </p>
 
+<p align>
+  <img src="images/CLI_Animated.svg">
+</p>
+
 ## Requirements
 
 Python **3.11+** (uses the standard `tomllib`). No dependencies.
