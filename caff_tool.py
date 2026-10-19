@@ -675,7 +675,7 @@ def print_usage():
             line += " " + _c(comment, GRAY)
         print(line)
 
-    print()
+    print("Version 1.1.1 Beta".rjust(83))
     for line in logo:
         print(_paint_logo(line))
     print()
