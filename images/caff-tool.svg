@@ -55,15 +55,6 @@
       caff_tool.py
     </text>
 
-    <!-- Background code aesthetics (real commands from the tool) -->
-    <g fill="#30363d" font-family="'Fira Code', 'Cascadia Code', monospace" font-size="11" opacity="0.55">
-      <text x="28" y="72">&gt; python caff_tool.py unpack input.bin</text>
-      <text x="28" y="90">[OK] CAFF header verified · checksum @ 0x14</text>
-      <text x="28" y="108">[OK] Key table + LSBL linked (467 banks tested)</text>
-      <text x="28" y="126">[OK] Round-trip: byte-for-byte identical</text>
-      <text x="28" y="390">STATUS: READY · unpack · pack · unpack-all · pack-all</text>
-    </g>
-
     <!-- CENTRAL LOGO ICON: Hexagon + &gt;_ -->
     <g transform="translate(340, 195)">
       <!-- Outer dashed hexagon -->
