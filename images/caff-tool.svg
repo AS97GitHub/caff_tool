@@ -12,7 +12,7 @@
       <stop offset="100%" stop-color="#0d1117" />
     </linearGradient>
 
-    <!-- Primary Accent Gradient (Cyan / Teal – matches repo CLI.svg) -->
+    <!-- Primary Accent Gradient (Cyan / Teal) -->
     <linearGradient id="accentGradient" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#4ec9b0" />
       <stop offset="100%" stop-color="#79c0ff" />
