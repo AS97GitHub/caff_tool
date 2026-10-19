@@ -55,6 +55,27 @@
       caff_tool.py
     </text>
 
+    <!-- Background code aesthetics (real commands from the tool) -->
+    <g fill="#30363d" font-family="'Fira Code', 'Cascadia Code', monospace" font-size="11" opacity="0.55">
+      <text x="28" y="72">[OK] ThroneRoom: 75 entries (in-place)</text>
+      <text x="28" y="90">[OK] TrainingCave: 5 entries (in-place)</text>
+      <text x="28" y="108">[OK] TrainingLevel: 31 entries (in-place)</text>
+      <text x="28" y="126">[OK] UBend: 8 entries (in-place)</text>
+      <text x="28" y="144">[OK] UIFrontend: 58 entries (in-place)</text>
+      <text x="28" y="162">[OK] UIPause: 25 entries (in-place)</text>
+      <text x="28" y="180">[OK] VolcanoInside: 2 entries (in-place)</text>
+      <text x="28" y="198">[OK] VolcanoRace: 11 entries (in-place)</text>
+      <text x="28" y="216">[OK] WarBoss: 34 entries (in-place)</text>
+      <text x="28" y="234">[OK] Windmill: 61 entries (in-place)</text>
+      <text x="28" y="252">[OK] WindmillExploded: 14 entries (in-place)</text>
+      <text x="28" y="270">[OK] basic_characters: 1 entries (in-place)</text>
+      <text x="28" y="288">[OK] chapters_text: 77 entries (in-place)</text>
+      <text x="28" y="306">[OK] extra_speech: 12 entries (in-place)</text>
+      <text x="28" y="324">[OK] mpClasses: 204 entries (in-place)</text>
+      <text x="28" y="342">[OK] tips: 28 entries (in-place)</text>
+      <text x="28" y="360">[SUCCESS] 69 banks written to 'text'</text>
+    </g>
+
     <!-- CENTRAL LOGO ICON: Hexagon + &gt;_ -->
     <g transform="translate(340, 195)">
       <!-- Outer dashed hexagon -->
@@ -92,7 +113,7 @@
     </g>
 
     <!-- Bottom prompt with blinking cursor -->
-    <g transform="translate(28, 355)">
+    <g transform="translate(28, 380)">
       <text x="0" y="0" fill="#4ec9b0" font-family="'Fira Code', monospace" font-weight="600" font-size="15">&gt;</text>
       <rect x="16" y="-12" width="9" height="15" fill="#4ec9b0" opacity="0.85">
         <animate attributeName="opacity" values="1;0;1" dur="1.05s" repeatCount="indefinite" />
