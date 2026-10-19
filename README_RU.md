@@ -128,11 +128,6 @@ LSBL   "LSBL": таблица (u16 line, u32 wchar_offset)+ — смещения
 При удлинении текста сдвигается хвост файла — поэтому и нужен rebuild:
 пересчёт LSBL №1, размеров секции и чексуммы.
 
-## Credits
-
-- Font: [Fira Code](https://github.com/tonsky/FiraCode) by Nikita Prokopov,
-  licensed under the [SIL Open Font License 1.1](https://openfontlicense.org)
-
 ---
 
 Не аффилировано с Microsoft / Rare. Все торговые марки принадлежат их правообладателям.
