@@ -46,6 +46,12 @@ unpacks them into editable TOML and repacks with support for strings of **any le
 - `offset`/`max_bytes` fields are not needed in TOML — packing resolves strings by
   key names (older TOMLs that include these fields are still supported).
 
+## CLI Visualization
+
+<p align>
+  <img src="images/CLI.svg">
+</p>
+
 ## Requirements
 
 Python **3.11+** (uses the standard `tomllib`). No dependencies.
