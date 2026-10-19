@@ -52,6 +52,10 @@
   <img src="images/CLI.svg">
 </p>
 
+<p align>
+  <img src="images/CLI_Animated.svg">
+</p>
+
 ## Требования
 
 Python **3.11+** (используется стандартный `tomllib`). Зависимостей нет.
