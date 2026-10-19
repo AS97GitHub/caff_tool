@@ -52,7 +52,7 @@
 
     <!-- Window Title -->
     <text x="90" y="27" fill="#8b949e" font-family="'Fira Code', 'Cascadia Code', 'Consolas', monospace" font-size="12" font-weight="500">
-      caff_tool.py — Python 3.11+ — 80×24
+      caff_tool.py
     </text>
 
     <!-- Background code aesthetics (real commands from the tool) -->
