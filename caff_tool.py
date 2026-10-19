@@ -719,7 +719,11 @@ if __name__ == "__main__":
         if len(cli_args) < 3:
             print(_c('[ERROR]', RED) + " unpack-all requires: <lang_dir> <output.toml>")
             sys.exit(1)
-        CaffTomlConverter.unpack_all(cli_args[1], cli_args[2])
+        out_toml = cli_args[2]
+        if not os.path.splitext(out_toml)[1]:
+            out_toml += ".toml"
+            print(f"{_c('[INFO]', BLUE)} no extension given, writing to '{out_toml}'")
+        CaffTomlConverter.unpack_all(cli_args[1], out_toml)
 
     elif mode == "pack-all":
         if len(cli_args) < 3:
@@ -734,6 +738,9 @@ if __name__ == "__main__":
             if len(cli_args) > 2
             else os.path.splitext(in_bin_path)[0] + ".toml"
         )
+        if not os.path.splitext(out_toml_path)[1]:
+            out_toml_path += ".toml"
+            print(f"{_c('[INFO]', BLUE)} no extension given, writing to '{out_toml_path}'")
 
         with open(in_bin_path, "rb") as f:
             original_data = f.read()
