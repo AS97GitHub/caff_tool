@@ -190,10 +190,20 @@ class CaffTomlConverter:
 
         table_bytes = b"".join(struct.pack("<HI", l, o) for l, o in new_tbl)
         lsbl_prefix = 36 + 6 * len(new_tbl)          # magic + 7*u32 + count + table
-        A = lsbl_prefix + len(blob) + 2              # = txt_end - lsbl + 2 (verified)
-        D = A - 0x1C
-        B = parsed["hdr"][4] + delta                 # fields past text shift by delta
-        C = parsed["hdr"][5] + delta
+        A_new = lsbl_prefix + len(blob) + 2          # = txt_end - lsbl + 2 (verified)
+        A_orig = lsbl_prefix + parsed["old_blob_len"] + 2
+
+        # Header fields are only recomputed when they follow the known pattern
+        # (verified on all 467 game banks; EN<->FR field deltas == text delta).
+        # "Dead" fields (0 / pointing before the text end) are preserved as-is.
+        if parsed["hdr"][3] == A_orig:
+            A = A_new
+            D = A - 0x1C                             # holds for every hdr3==A bank
+        else:
+            A = parsed["hdr"][3]                     # alien layout (e.g. Credits)
+            D = parsed["hdr"][6]
+        B = parsed["hdr"][4] + delta if parsed["hdr"][4] >= A_orig else parsed["hdr"][4]
+        C = parsed["hdr"][5] + delta if parsed["hdr"][5] >= A_orig else parsed["hdr"][5]
 
         lsbl_blk = b"LSBL"
         lsbl_blk += b"".join(struct.pack("<I", v) for v in (parsed["hdr"][0], parsed["hdr"][1], parsed["hdr"][2], A, B, C, D))
@@ -675,7 +685,7 @@ def print_usage():
             line += " " + _c(comment, GRAY)
         print(line)
 
-    print("Version 1.1.1 Beta".rjust(83))
+    print("Version 1.1.2 Beta".rjust(83))
     for line in logo:
         print(_paint_logo(line))
     print()
