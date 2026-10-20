@@ -75,7 +75,7 @@
   <!-- Animated PowerShell output -->
   <defs>
     <clipPath id="terminal-clip">
-      <rect x="1" y="32" width="898" height="553"/>
+      <rect x="1" y="32" width="873" height="553"/>
     </clipPath>
   </defs>
   <g clip-path="url(#terminal-clip)">
