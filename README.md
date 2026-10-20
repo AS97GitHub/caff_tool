@@ -112,8 +112,7 @@ are meant to be edited. The composite `key` is a single record identifier,
 3. Do not rename keys (`key`): packing resolves strings by them; a typo raises
    `Key '...' not found in binary`.
 4. String length is technically unlimited, but subtitle display time is fixed
-   (bound to the voice-over timing) and does not depend on text length: a longer
-   line will not be shown any longer and may simply be unreadable in time. Try to
+   (bound to the voice-over timing) and does not depend on text length. Try to
    stay within a reasonable length of the original.
 
 ## CAFF structure (overview)
