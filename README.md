@@ -7,8 +7,7 @@
 [![en][badge-en]][vot-readme-en]
 [![ru][badge-ru]][vot-readme-ru]
 
-An editor for **Conker: Live & Reloaded** (Xbox, 2005) CAFF text banks (`.bin`):
-unpacks them into editable TOML and repacks with support for strings of **any length**.
+An editor for **Conker: Live & Reloaded** (Xbox, 2005) CAFF text banks (`.bin`): unpacks them into editable TOML and repacks with support for strings of **any length**.
 
 > Based on the CAFF format analysis from the **[conker-live-and-reloaded-decensor](https://github.com/nastys/conker-live-and-reloaded-decensor)** project.
 > The original repository contains a full toolset (decensor and more); this
@@ -17,12 +16,8 @@ unpacks them into editable TOML and repacks with support for strings of **any le
 
 ## Features
 
-- **Accurate unpacking**: strings and keys are extracted structurally (key table +
-  LSBL offset table), not heuristically. Round-trip verified byte-for-byte on all
-  467 game `.bin` files (EN/FR/DE/ES/IT/JA).
-- **Correct key binding**: a key is linked to its string via the source-script line
-  number (`key.X high 16 bits` = `line` field of the LSBL entry). UI labels no
-  longer end up attached to the wrong keys.
+- **Accurate unpacking**: strings and keys are extracted structurally (key table + LSBL offset table), not heuristically. Round-trip verified byte-for-byte on all 467 game `.bin` files (EN/FR/DE/ES/IT/JA).
+- **Correct key binding**: a key is linked to its string via the source-script line number (`key.X high 16 bits` = `line` field of the LSBL entry). UI labels no longer end up attached to the wrong keys.
 - **UI layout in a single record**: `KEY|KEY_POSITION_X|KEY_POSITION_Y|KEY_SCALE`:
 
   ```toml
@@ -34,13 +29,9 @@ unpacks them into editable TOML and repacks with support for strings of **any le
   text = "Game 1"
   ```
 
-- **Readable UTF-8**: texts in any language stay literal in TOML, no `\u` escapes.
-- **Length changes**: equal-length strings are patched byte-for-byte; any length
-  change (shorter or longer) triggers a full CAFF rebuild — the LSBL #1 offset table, size fields (`0x34`,
-  `0x50`, `0x64`, `0x194`, `B`/`C`) and the header checksum (`0x14`) are
-  recalculated automatically.
-- `offset`/`max_bytes` fields are not needed in TOML — packing resolves strings by
-  key names (older TOMLs that include these fields are still supported).
+- **Readable UTF-8**: texts in any language stay literal in TOML, no `\uXXXX` escapes.
+- **Length changes**: equal-length strings are patched byte-for-byte; any length change (shorter or longer) triggers a full CAFF rebuild — the LSBL #1 offset table, size fields (`0x34`, `0x50`, `0x64`, `0x194`, `B`/`C`) and the header checksum (`0x14`) are recalculated automatically.
+- `offset`/`max_bytes` fields are not needed in TOML — packing resolves strings by key names (older TOMLs that include these fields are still supported).
 
 ## CLI Visualization
 
@@ -72,9 +63,9 @@ python caff_tool.py pack input.toml [output.bin]
 :: patch a live .bin (overwrites it!)
 python caff_tool.py pack input.toml [target.bin] [output.bin] --safe
 
-:: whole language in one file (all banks in a folder -> one TOML and back)
-python caff_tool.py unpack-all text/English English.toml
-python caff_tool.py pack-all English.toml text/English [text/Russian]
+:: unpack all banks into one TOML file and pack them back
+python caff_tool.py unpack-all <lang_dir> <output.toml>
+python caff_tool.py pack-all <combined.toml> <lang_dir> [out_dir]
 ```
 
 Batch mode (recursively converts all `default.bin` ↔ `default.toml`):
@@ -101,21 +92,14 @@ text = "Chapters"
 template_hex = "43414646..."   # reference binary (pack fallback)
 ```
 
-Only the `text` values (and `position_*`, if you need to adjust the layout)
-are meant to be edited. The composite `key` is a single record identifier,
-`|` is the separator.
+Only the `text` values (and `position_*`, if you need to adjust the layout) are meant to be edited. The composite `key` is a single record identifier, `|` is the separator.
 
 ## Translation guidelines
 
-1. Do not remove engine control tags: `{PMARKER}`, `{SWIRL}`, `{STAR}`,
-   `{LIGHTNING}`, `{SKULL}` — they control subtitle pauses and icons.
-2. Do not "translate" `position_x` / `position_y` / `scale` — these are menu
-   element coordinates/scale (`"0"` = default).
-3. Do not rename keys (`key`): packing resolves strings by them; a typo raises
-   `Key '...' not found in binary`.
-4. String length is technically unlimited, but subtitle display time is fixed
-   (bound to the voice-over timing) and does not depend on text length. Try to
-   stay within a reasonable length of the original.
+1. Do not remove engine control tags: `{PMARKER}`, `{SWIRL}`, `{STAR}`, `{LIGHTNING}`, `{SKULL}` — they control subtitle pauses and icons.
+2. Do not "translate" `position_x` / `position_y` / `scale` — these are menu element coordinates/scale (`"0"` = default).
+3. Do not rename keys (`key`): packing resolves strings by them; a typo raises `Key '...' not found in binary`.
+4. String length is technically unlimited, but subtitle display time is fixed (bound to the voice-over timing) and does not depend on text length. Try to stay within a reasonable length of the original.
 
 ## CAFF structure (overview)
 
@@ -131,11 +115,8 @@ texts  UTF-16LE, NUL-terminated
 tail   LSBL #2 (ASCII keys), debug comments, build_path
 ```
 
-When a text grows, the file tail shifts — hence the rebuild: recalculating
-LSBL #1, section sizes and the checksum.
+When a text grows, the file tail shifts — hence the rebuild: recalculating LSBL #1, section sizes and the checksum.
 
 ---
 
-Not affiliated with Microsoft / Rare. All trademarks are property of their
-respective owners. Intended for non-commercial use (translations, modding,
-format research).
+Not affiliated with Microsoft / Rare. All trademarks are property of their respective owners. Intended for non-commercial use (translations, modding, format research).
