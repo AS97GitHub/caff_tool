@@ -54,10 +54,10 @@ Python **3.11+** (uses the standard `tomllib`). No dependencies.
 > ⚠️ On Linux you may need to use `python3` instead of `python`.
 
 ```bat
-:: .bin -> .toml (with built-in lossless round-trip verification)
+:: .bin → .toml (with built-in lossless round-trip verification)
 python caff_tool.py unpack <input.bin> [output.toml]
 
-:: .toml -> .bin
+:: .toml → .bin
 python caff_tool.py pack <input.toml> [output.bin]
 
 :: patch a live .bin (overwrites it!)
