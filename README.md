@@ -55,13 +55,13 @@ Python **3.11+** (uses the standard `tomllib`). No dependencies.
 
 ```bat
 :: .bin -> .toml (with built-in lossless round-trip verification)
-python caff_tool.py unpack input.bin [output.toml]
+python caff_tool.py unpack <input.bin> [output.toml]
 
 :: .toml -> .bin
-python caff_tool.py pack input.toml [output.bin]
+python caff_tool.py pack <input.toml> [output.bin]
 
 :: patch a live .bin (overwrites it!)
-python caff_tool.py pack input.toml [target.bin] [output.bin] --safe
+python caff_tool.py pack <input.toml> [target.bin] [output.bin] --safe
 
 :: unpack all banks into one TOML file and pack them back
 python caff_tool.py unpack-all <lang_dir> <output.toml>
