@@ -55,17 +55,17 @@ Python **3.11+** (используется стандартный `tomllib`). З
 
 ```bat
 :: .bin -> .toml (со встроенной проверкой побайтового совпадения после обратной сборки)
-python caff_tool.py unpack input.bin [output.toml]
+python caff_tool.py unpack <входной_файл.bin> [выходной_файл.toml]
 
 :: .toml -> .bin
-python caff_tool.py pack input.toml [output.bin]
+python caff_tool.py pack <входной_файл.toml> [выходной_файл.bin]
 
 :: обновление существующего .bin (файл перезаписывается!)
-python caff_tool.py pack input.toml [target.bin] [output.bin] --safe
+python caff_tool.py pack <входной_файл.toml> [целевой_файл.bin] [выходной_файл.bin] --safe
 
 :: пакетное преобразование банков в один TOML-файл и обратно
-python caff_tool.py unpack-all <lang_dir> <output.toml>
-python caff_tool.py pack-all <combined.toml> <lang_dir> [out_dir]
+python caff_tool.py unpack-all <папка_языка> <выходной_файл.toml>
+python caff_tool.py pack-all <общий_файл.toml> <папка_языка> [выходная_папка]
 ```
 
 Пакетная обработка папки: рекурсивное преобразование файлов `default.bin` ↔ `default.toml`.
